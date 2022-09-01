@@ -4,7 +4,7 @@
 	"description": "Preview MRC (.mrc) files in VSCode",
 	"publisher": "philippschoennenbeck",
 	"icon": "images/icon.png",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.70.2"
 	},
@@ -84,6 +84,6 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/microsoft/vscode-wordcount.git"
+		"url": "https://github.com/Croxa/MRC-Viewer"
 	  }
 }

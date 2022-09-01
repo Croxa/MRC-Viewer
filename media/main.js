@@ -59,38 +59,47 @@
 
 	function loadSlice(delta){
 
+		var src = getSliceData();
+		if (src){
+			image.src = src;
+		} 
+		else{
+			vscode.postMessage({
+				type: 'message',
+				value: "This mrc mode is not supported right now."
+			});
+		}
 		
-		
-		var req = new XMLHttpRequest();
-		req.open('GET', current_url);
-		req.responseType = "arraybuffer";
+		// var req = new XMLHttpRequest();
+		// req.open('GET', current_url);
+		// req.responseType = "arraybuffer";
 
-		req.onload = function (e) {
-			if (req.status == 200) {
-				var src = getSliceData(req.response);
-				if (src){
-					image.src = src;
-				} 
-				else{
-					vscode.postMessage({
-						type: 'message',
-						value: "This mrc mode is not supported right now."
-					});
-				}
-			}
-		};
-		req.send();
+		// req.onload = function (e) {
+		// 	if (req.status == 200) {
+		// 		var src = getSliceData(req.response);
+		// 		if (src){
+		// 			image.src = src;
+		// 		} 
+		// 		else{
+		// 			vscode.postMessage({
+		// 				type: 'message',
+		// 				value: "This mrc mode is not supported right now."
+		// 			});
+		// 		}
+		// 	}
+		// };
+		// req.send();
 		// getSliceData(req.response);
 	}
 
-	function getSliceData(response){
-		var buffer = new Uint8Array(response);
-		var headerArray = new Uint32Array(response.slice(0,8));
-		var width = headerArray[0];
-		var height = headerArray[1];
+	function getSliceData(){
+		// var buffer = new Uint8Array(response);
+		// var headerArray = new Uint32Array(response.slice(0,8));
+		// var width = headerArray[0];
+		// var height = headerArray[1];
 		
 
-		var data = new mode(response.slice(1024 + width * height * current_slice * bit_size, 1024 + width * height * (current_slice + 1) * bit_size ));
+		// var data = new mode(response.slice(1024 + width * height * current_slice * bit_size, 1024 + width * height * (current_slice + 1) * bit_size ));
 
 		// var current_max_value = Number.MIN_VALUE;
 		// var current_min_value = Number.MAX_VALUE;
@@ -100,22 +109,23 @@
 		// 	if (data[i] > current_max_value ){current_max_value = data[i];}
 		// }
 
-		data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
+		// data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
 
-		var idx = 0;
-		var new_data = new Uint8ClampedArray(width * height * 4);
-		for (var i = 0; i < new_data.length;i += 4){
-			idx = Math.round(i  / 4);
-			new_data[i] = data[idx];
-			new_data[i+1] = data[idx];
-			new_data[i+2] = data[idx];
-			new_data[i+3] = 255;
-		}
+		// var idx = 0;
+		// var new_data = new Uint8ClampedArray(width * height * 4);
+		// for (var i = 0; i < new_data.length;i += 4){
+		// 	idx = Math.round(i  / 4);
+		// 	new_data[i] = data[idx];
+		// 	new_data[i+1] = data[idx];
+		// 	new_data[i+2] = data[idx];
+		// 	new_data[i+3] = 255;
+		// }
+		var current_data = data.slice(width * height * current_slice * 4, width * height * (current_slice + 1) * 4)
 		var canvas = document.createElement('canvas');
 		canvas.width  = width;
 		canvas.height = height;
 		var ctx = canvas.getContext('2d');	
-		var rgbaImage = new ImageData(new_data, width, height);
+		var rgbaImage = new ImageData(current_data, width, height);
 		ctx.putImageData(rgbaImage, 0, 0);
 
 		return canvas.toDataURL();
@@ -128,8 +138,8 @@
 		var headerArray = new Uint32Array(response.slice(0,1024));
 
 
-		var width = headerArray[0];
-		var height = headerArray[1];
+		width = headerArray[0];
+		height = headerArray[1];
 		
 
 		max_slice = headerArray[2] - 1;
@@ -139,25 +149,27 @@
 			return null
 		}
 
-		var whole_data = new mode(response.slice(1024));
-
-		var data = new mode(response.slice(1024,1024 + width * height * bit_size));
+		data = new mode(response.slice(1024));
 
 		var current_max_value = Number.MIN_VALUE;
 		var current_min_value = Number.MAX_VALUE;
 
-		for (var i = 0; i < whole_data.length; i++){
-			if (whole_data[i] < current_min_value ){current_min_value = whole_data[i];}
-			if (whole_data[i] > current_max_value ){current_max_value = whole_data[i];}
+		for (var i = 0; i < data.length; i++){
+			if (data[i] < current_min_value ){current_min_value = data[i];}
+			if (data[i] > current_max_value ){current_max_value = data[i];}
 		}
 
 		min_value = current_min_value;
 		max_value = current_max_value;
+		
 		data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
+
+		
+		
 
 		// var intData = new Uint8ClampedArray(data);
 		var idx = 0;
-		var new_data = new Uint8ClampedArray(width * height * 4);
+		var new_data = new Uint8ClampedArray(data.length * 4);
 		for (var i = 0; i < new_data.length;i += 4){
 			idx = Math.round(i  / 4);
 			new_data[i] = data[idx];
@@ -166,7 +178,8 @@
 			new_data[i+3] = 255;
 		}
 		
-
+		data = new_data;
+		var current_data = data.slice(0,width * height * 4);
 
 		var canvas = document.createElement('canvas');
 		canvas.width  = width;
@@ -175,7 +188,7 @@
 		
 	
 		var ctx = canvas.getContext('2d');	
-		var rgbaImage = new ImageData(new_data, width, height);
+		var rgbaImage = new ImageData(current_data, width, height);
 		ctx.putImageData(rgbaImage, 0, 0);
 		vscode.postMessage({
 			type: 'slice',
@@ -200,6 +213,9 @@
 	var current_url = null;
 	var min_value = null;
 	var max_value = null;
+	var data = null;
+	var width = null;
+	var height = null;
 	var mode_map = {0:[1, Int8Array], 1:[2, Int16Array], 2: [4, Float32Array], 3:[2, null], 4:[4,null], 6:[2, Uint16Array], 12:[2, null], 101:[0.5,null]}
 	const zoomLevels = [
 		0.1,
@@ -435,18 +451,18 @@
 				type: 'slice',
 				value: `${current_slice + 1}\/${max_slice + 1}`
 			});
-		
-			if (scrollTimer != -1){
-				clearTimeout(scrollTimer);
-			}
+			loadSlice(delta);
+			// if (scrollTimer != -1){
+			// 	clearTimeout(scrollTimer);
+			// }
 	
-			// scrollTimer = window.setTimeout(scrollFinished(), 500);
-			scrollTimer = window.setTimeout(scrollFinished,500)
+			// // scrollTimer = window.setTimeout(scrollFinished(), 500);
+			// scrollTimer = window.setTimeout(scrollFinished,500)
 		
-			function scrollFinished() {
+			// function scrollFinished() {
 				
-				loadSlice(delta);
-			}
+			// 	loadSlice(delta);
+			// }
 
 
 
