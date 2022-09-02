@@ -39,4 +39,4 @@ You can control the zoom level of the image:
 - Click on the zoom level in the status bar to reveal a selection list in the Command Palette. Choose the desired zoom level from the list.
 
 ### **Slice**
-You can scroll through the slices of tomograms by scrolling with alt pressed. The image will be updated after scrolling stops.
+You can scroll through the slices of tomograms by scrolling with alt-key pressed.

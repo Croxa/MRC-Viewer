@@ -171,11 +171,18 @@
 		var idx = 0;
 		var new_data = new Uint8ClampedArray(data.length * 4);
 		for (var i = 0; i < new_data.length;i += 4){
+			if (i % (width * height * 4) == 0){
+				vscode.postMessage({
+					type: 'slice',
+					value: `${Math.round(i / (width * height * 4)) + 1}\/${max_slice + 1}`
+				});
+			}
 			idx = Math.round(i  / 4);
 			new_data[i] = data[idx];
 			new_data[i+1] = data[idx];
 			new_data[i+2] = data[idx];
 			new_data[i+3] = 255;
+			
 		}
 		
 		data = new_data;
