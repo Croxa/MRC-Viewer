@@ -110,6 +110,10 @@ class Preview extends dispose_1.Disposable {
                         vscode.window.showInformationMessage(message.value);
                         
                     }
+                case "updateSlicing":
+                    {
+                        this.sliceStatusBarEntry.updateOptions(message.value);
+                    }
             }
         }));
         this._register(zoomStatusBarEntry.onDidChangeScale(e => {
@@ -117,6 +121,15 @@ class Preview extends dispose_1.Disposable {
                 this.webviewEditor.webview.postMessage({ type: 'setScale', scale: e.scale });
             }
         }));
+
+        this._register(sliceStatusBarEntry.onDidChangeSlice(e => {
+            if (this._previewState === 2 /* Active */) {
+                this.webviewEditor.webview.postMessage({ type: 'setSlice', slice: e.slice });
+            }
+        }));
+
+
+
         this._register(webviewEditor.onDidChangeViewState(() => {
             this.update();
             this.webviewEditor.webview.postMessage({ type: 'setActive', value: this.webviewEditor.active });

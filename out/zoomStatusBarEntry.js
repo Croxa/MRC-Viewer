@@ -25,7 +25,7 @@ class ZoomStatusBarEntry extends ownedStatusBarEntry_1.PreviewStatusBarEntry {
             id: 'preview-mrc.zoom',
             name: "Image Zoom",
             alignment: vscode.StatusBarAlignment.Right,
-            priority: 102 /* to the left of editor size entry (101) */,
+            priority: 103 /* to the left of editor size entry (101) */,
         });
         this._onDidChangeScale = this._register(new vscode.EventEmitter());
         this.onDidChangeScale = this._onDidChangeScale.event;

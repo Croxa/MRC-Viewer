@@ -57,7 +57,7 @@
 		
 	}
 
-	function loadSlice(delta){
+	function loadSlice(){
 
 		var src = getSliceData();
 		if (src){
@@ -127,7 +127,6 @@
 		var ctx = canvas.getContext('2d');	
 		var rgbaImage = new ImageData(current_data, width, height);
 		ctx.putImageData(rgbaImage, 0, 0);
-
 		return canvas.toDataURL();
 	}
 
@@ -137,20 +136,26 @@
 
 		var headerArray = new Uint32Array(response.slice(0,1024));
 
-
+		
 		width = headerArray[0];
 		height = headerArray[1];
-		
+
+
 
 		max_slice = headerArray[2] - 1;
 		mode = mode_map[headerArray[3]][1];
 		bit_size = mode_map[headerArray[3]][0];
+
+		start_byte = 1024 + headerArray[23];
+
+		
 		if (!mode){
 			return null
 		}
 
-		data = new mode(response.slice(1024));
+		data = new mode(response.slice(start_byte));
 
+	
 		var current_max_value = Number.MIN_VALUE;
 		var current_min_value = Number.MAX_VALUE;
 
@@ -159,13 +164,12 @@
 			if (data[i] > current_max_value ){current_max_value = data[i];}
 		}
 
+
 		min_value = current_min_value;
 		max_value = current_max_value;
 		
 		data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
 
-		
-		
 
 		// var intData = new Uint8ClampedArray(data);
 		var idx = 0;
@@ -184,10 +188,9 @@
 			new_data[i+3] = 255;
 			
 		}
-		
+
 		data = new_data;
 		var current_data = data.slice(0,width * height * 4);
-
 		var canvas = document.createElement('canvas');
 		canvas.width  = width;
 		canvas.height = height;
@@ -201,6 +204,11 @@
 			type: 'slice',
 			value: `${current_slice + 1}\/${max_slice + 1}`
 		});
+		vscode.postMessage({
+			type: 'updateSlicing',
+			value: max_slice
+		});
+
 		return canvas.toDataURL();
 	}
 
@@ -223,6 +231,7 @@
 	var data = null;
 	var width = null;
 	var height = null;
+	var start_byte = 1024;
 	var mode_map = {0:[1, Int8Array], 1:[2, Int16Array], 2: [4, Float32Array], 3:[2, null], 4:[4,null], 6:[2, Uint16Array], 12:[2, null], 101:[0.5,null]}
 	const zoomLevels = [
 		0.1,
@@ -267,6 +276,21 @@
 	// Elements
 	const container = document.body;
 	const image = document.createElement('img');
+
+
+	function updateSlice(newSlice) {
+		if (!image || !hasLoadedImage || !image.parentElement) {
+			return;
+		}
+		current_slice = clamp(newSlice, min_slice, max_slice);
+		vscode.postMessage({
+			type: 'message',
+			value: "Going to slice " + newSlice + " now."
+		});
+
+		
+		loadSlice();
+	}
 
 	function updateScale(newScale) {
 		if (!image || !hasLoadedImage || !image.parentElement) {
@@ -458,7 +482,7 @@
 				type: 'slice',
 				value: `${current_slice + 1}\/${max_slice + 1}`
 			});
-			loadSlice(delta);
+			loadSlice();
 			// if (scrollTimer != -1){
 			// 	clearTimeout(scrollTimer);
 			// }
@@ -559,6 +583,10 @@
 
 			case 'zoomOut':
 				zoomOut();
+				break;
+			
+			case 'setSlice':
+				updateSlice(e.data.slice);
 				break;
 		}
 	});

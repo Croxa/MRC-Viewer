@@ -1,0 +1,1 @@
+Added extended header functionality and slice selection through status bar.
