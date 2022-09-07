@@ -56,7 +56,8 @@ class SliceStatusBarEntry extends ownedStatusBarEntry_1.PreviewStatusBarEntry {
                 }})
             
             if (pick) {
-                this._onDidChangeSlice.fire({ slice: pick });
+                
+                this._onDidChangeSlice.fire({ slice: pick-1 });
             }
         })));
         this.entry.command = selectSliceCommandId;

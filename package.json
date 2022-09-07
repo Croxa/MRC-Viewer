@@ -28,6 +28,29 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		
+ 
+		"configuration": {
+			"properties": {
+				"mrcviewer.alwaysLoadDynamically": {
+					"default": "false",
+					"description": "Whether to always load the mrc file dynamically. Loading dynamically is slower but reduces RAM usage.",
+					"scope": "resource",
+					"type": "boolean"
+				},
+				"mrcviewer.maxFileSize": {
+					"default": "1024",
+					"description": "Max file size in Mb to still load completely in RAM. If the file size is larger, the data will be loaded dynamically.",
+					"scope": "resource",
+					"type": "number"
+				}
+			},
+			"title": "MrcViewer",
+			"type": "object"
+			  
+		},
+  
+
 		"customEditors": [
 			{
 				"viewType": "philippschoennenbeck.preview-mrc",
@@ -82,5 +105,11 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Croxa/MRC-Viewer"
+	},
+	"__metadata": {
+		"id": "a834c90a-3ceb-4542-b6f9-66a64e73ffa2",
+		"publisherDisplayName": "Philipp Schoennenbeck",
+		"publisherId": "3e4f6f71-798d-4969-80a9-2683cb6ca776",
+		"isPreReleaseVersion": false
 	}
 }

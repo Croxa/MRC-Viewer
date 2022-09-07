@@ -7,7 +7,6 @@
 
 
 
-
 (function () {
 
 	/**
@@ -37,20 +36,21 @@
 		req.open('GET', url);
 		
 
-		req.responseType = "arraybuffer";
+		req.responseType = "blob";
 		current_url = url;
 		req.onload = function (e) {
 			if (req.status == 200) {
-				var src = getDataURL(req.response);
-				if (src){
-					image.src = src ;
+				getDataURL(req.response).then((value) => {
+				if (value){
+					image.src = value ;
 				}
 				else{
 					vscode.postMessage({
 						type: 'message',
 						value: "This mrc mode is not supported right now."
 					});
-				}
+				}}) ;
+				
 			}
 		};
 		req.send();
@@ -58,158 +58,301 @@
 	}
 
 	function loadSlice(){
-
-		var src = getSliceData();
-		if (src){
-			image.src = src;
-		} 
-		else{
-			vscode.postMessage({
-				type: 'message',
-				value: "This mrc mode is not supported right now."
-			});
+		if (!loadDynamically){
+			var src = getSliceData(null).then((value) => {
+			if (value){
+				image.src = value ;
+			}
+			else{
+				vscode.postMessage({
+					type: 'message',
+					value: "This mrc mode is not supported right now."
+				});
+			}}) ;
+			
 		}
-		
-		// var req = new XMLHttpRequest();
-		// req.open('GET', current_url);
-		// req.responseType = "arraybuffer";
+		else{
+			var req = new XMLHttpRequest();
+			req.open('GET', current_url);
+			req.responseType = "blob";
 
-		// req.onload = function (e) {
-		// 	if (req.status == 200) {
-		// 		var src = getSliceData(req.response);
-		// 		if (src){
-		// 			image.src = src;
-		// 		} 
-		// 		else{
-		// 			vscode.postMessage({
-		// 				type: 'message',
-		// 				value: "This mrc mode is not supported right now."
-		// 			});
-		// 		}
-		// 	}
-		// };
-		// req.send();
+			req.onload = function (e) {
+				if (req.status == 200) {
+					var src = getSliceData(req.response).then((value) => {
+					if (value){
+						image.src = value ;
+					}
+					else{
+						vscode.postMessage({
+							type: 'message',
+							value: "This mrc mode is not supported right now."
+						});
+					}}) ;
+				}
+			};
+			req.send();
+		}
 		// getSliceData(req.response);
 	}
 
-	function getSliceData(){
-		// var buffer = new Uint8Array(response);
-		// var headerArray = new Uint32Array(response.slice(0,8));
-		// var width = headerArray[0];
-		// var height = headerArray[1];
-		
-
-		// var data = new mode(response.slice(1024 + width * height * current_slice * bit_size, 1024 + width * height * (current_slice + 1) * bit_size ));
-
-		// var current_max_value = Number.MIN_VALUE;
-		// var current_min_value = Number.MAX_VALUE;
-
-		// for (var i = 0; i < data.length; i++){
-		// 	if (data[i] < current_min_value ){current_min_value = data[i];}
-		// 	if (data[i] > current_max_value ){current_max_value = data[i];}
-		// }
-
-		// data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
-
-		// var idx = 0;
-		// var new_data = new Uint8ClampedArray(width * height * 4);
-		// for (var i = 0; i < new_data.length;i += 4){
-		// 	idx = Math.round(i  / 4);
-		// 	new_data[i] = data[idx];
-		// 	new_data[i+1] = data[idx];
-		// 	new_data[i+2] = data[idx];
-		// 	new_data[i+3] = 255;
-		// }
-		var current_data = data.slice(width * height * current_slice * 4, width * height * (current_slice + 1) * 4)
-		var canvas = document.createElement('canvas');
-		canvas.width  = width;
-		canvas.height = height;
-		var ctx = canvas.getContext('2d');	
-		var rgbaImage = new ImageData(current_data, width, height);
-		ctx.putImageData(rgbaImage, 0, 0);
-		return canvas.toDataURL();
-	}
-
-	function getDataURL(response) {
-
-		// var buffer = new Uint8Array(response);
-
-		var headerArray = new Uint32Array(response.slice(0,1024));
-
-		
-		width = headerArray[0];
-		height = headerArray[1];
-
-
-
-		max_slice = headerArray[2] - 1;
-		mode = mode_map[headerArray[3]][1];
-		bit_size = mode_map[headerArray[3]][0];
-
-		start_byte = 1024 + headerArray[23];
-
-		
-		if (!mode){
-			return null
-		}
-
-		data = new mode(response.slice(start_byte));
-
-	
-		var current_max_value = Number.MIN_VALUE;
-		var current_min_value = Number.MAX_VALUE;
-
-		for (var i = 0; i < data.length; i++){
-			if (data[i] < current_min_value ){current_min_value = data[i];}
-			if (data[i] > current_max_value ){current_max_value = data[i];}
-		}
-
-
-		min_value = current_min_value;
-		max_value = current_max_value;
-		
-		data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
-
-
-		// var intData = new Uint8ClampedArray(data);
-		var idx = 0;
-		var new_data = new Uint8ClampedArray(data.length * 4);
-		for (var i = 0; i < new_data.length;i += 4){
-			if (i % (width * height * 4) == 0){
-				vscode.postMessage({
-					type: 'slice',
-					value: `${Math.round(i / (width * height * 4)) + 1}\/${max_slice + 1}`
-				});
+	async function getSliceData(response){
+		if (loadDynamically){
+			function concat(array1, array2, type){
+				var concatedArray = type(length=array1.length + array2.length)
+				concatedArray.set(array1,0);
+				concatedArray.set(array2,array1.length);
+				return concatedArray
 			}
-			idx = Math.round(i  / 4);
-			new_data[i] = data[idx];
-			new_data[i+1] = data[idx];
-			new_data[i+2] = data[idx];
-			new_data[i+3] = 255;
 			
-		}
+	
+			var stream = response.stream();
+			var reader = stream.getReader();
+			var currentStartByte = start_byte * 4 ;
+			var extra = null;
+			var currentIdx = 0;
+			var arrayIdx = 0;
+			var current_data = new mode(length=width*height)
+			
+			while (true) {
+				// for each iteration: value is the next blob fragment
+				let { done, value } = await reader.read();
+				if (done) {
+					// no more data in the stream
+					break;
+				}
+				
+				if (currentStartByte > 0){
+					if (value.length < currentStartByte){
+						currentStartByte -= value.length;
+						continue;
+					}
+					else{
+						value = value.slice(currentStartByte);
 
-		data = new_data;
-		var current_data = data.slice(0,width * height * 4);
+						currentStartByte = 0;
+					}
+				}
+				if (extra){
+					value = concat(extra, value, Uint8Array);
+				}
+				if (value.length % bit_size != 0){
+					extra = value.slice(value.length - value.length.bit_size);
+					value = value.slice(0,value.length - value.length.bit_size);
+				}
+
+				if (currentIdx + value.length > current_slice * width * height * bit_size){
+
+					if (arrayIdx==0){
+						var startIdx = current_slice * width * height * bit_size - currentIdx;
+					}
+					else{
+						var startIdx = 0;
+					}
+					var slicedData = value.slice(startIdx, startIdx + width * height * bit_size - arrayIdx)
+
+					current_data.set(new mode(slicedData.buffer),Math.round(arrayIdx / bit_size));
+					arrayIdx += slicedData.length;
+					currentIdx += value.length;
+
+					
+				}
+				else{
+					currentIdx += value.length
+				}
+				if (currentIdx > (current_slice + 1) * width * height * bit_size){
+					break;
+				}
+			}
+
+
+
+
+	
+			// var current_data = new mode(response.slice(start_byte + width * height * current_slice * bit_size, start_byte + width * height * (current_slice + 1) * bit_size ));
+
+	
+			current_data = current_data.map(i => (i - min_value ) / (max_value - min_value) * 255);
+	
+			var idx = 0;
+			var new_data = new Uint8ClampedArray(width * height * 4);
+			for (var i = 0; i < new_data.length;i += 4){
+				idx = Math.round(i  / 4);
+				new_data[i] = current_data[idx];
+				new_data[i+1] = current_data[idx];
+				new_data[i+2] = current_data[idx];
+				new_data[i+3] = 255;
+			}
+		}
+		else{
+			var current_data = data.slice(width * height * current_slice,width * height * (current_slice + 1));
+
+			var new_data = new Uint8ClampedArray(current_data.length * 4);
+
+			var idx = 0;
+
+			for (var i = 0; i < new_data.length;i += 4){
+				idx = Math.round(i  / 4);
+				new_data[i] = current_data[idx];
+				new_data[i+1] = current_data[idx];
+				new_data[i+2] = current_data[idx];
+				new_data[i+3] = 255;
+			}
+		}
 		var canvas = document.createElement('canvas');
 		canvas.width  = width;
 		canvas.height = height;
-
-		
-	
 		var ctx = canvas.getContext('2d');	
-		var rgbaImage = new ImageData(current_data, width, height);
+
+		var rgbaImage = new ImageData(new_data, width, height);
 		ctx.putImageData(rgbaImage, 0, 0);
 		vscode.postMessage({
 			type: 'slice',
 			value: `${current_slice + 1}\/${max_slice + 1}`
 		});
+		return canvas.toDataURL();
+	}
+
+	async function getDataURL(response) {
+		function concat(array1, array2, type){
+			var concatedArray = type(length=array1.length + array2.length)
+			concatedArray.set(array1,0);
+			concatedArray.set(array2,array1.length);
+			return concatedArray
+		}
+		
+
+		var stream = response.stream();
+		var reader = stream.getReader();
+		var headerArray = new Uint8Array(length=1024*4);
+		
+		var currentHeaderIdx = 0;
+		while (true) {
+			// for each iteration: value is the next blob fragment
+			let { done, value } = await reader.read();
+			if (done) {
+			  // no more data in the stream
+
+			  break;
+			}
+			
+			if (currentHeaderIdx < 1024*4){
+				let leftOver = 1024*4 - currentHeaderIdx;
+				headerArray.set(value.slice(0,leftOver),currentHeaderIdx);
+				if (value.length < leftOver){
+					currentHeaderIdx = currentHeaderIdx + value.length;
+				}
+				{
+					currentHeaderIdx = 1024;
+					break;
+				}
+				
+
+			}
+		}
+		var headerArray32 = new Uint32Array(headerArray.buffer);
+
+		width = headerArray32[0];
+		height = headerArray32[1];
+
+
+
+		max_slice = headerArray32[2] - 1;
+		mode = mode_map[headerArray32[3]][1];
+		bit_size = mode_map[headerArray32[3]][0];
+
+		start_byte = 1024 + headerArray32[23];
+		
+		
+		if (!mode){
+			return null
+		}
+		if (response.length > maxFileSize){
+			loadDynamically = true
+		} 
+		if (loadDynamically){
+
+			var stream = response.stream();
+			var reader = stream.getReader();
+			var headerArray = new Uint8Array(length=1024*4);
+			
+			var currentHeaderIdx = 0;
+			var extra = null;
+			var current_max_value = Number.MIN_VALUE;
+			var current_min_value = Number.MAX_VALUE;
+			var currentStartByte = start_byte * 4 ;
+			while (true) {
+				// for each iteration: value is the next blob fragment
+				let { done, value } = await reader.read();
+				if (done) {
+					// no more data in the stream
+					break;
+				}
+				
+				if (currentStartByte > 0){
+					if (value.length < currentStartByte){
+						currentStartByte -= value.length;
+						continue;
+					}
+					else{
+						value = value.slice(currentStartByte)
+						currentStartByte = 0
+					}
+				}
+				if (extra){
+					value = concat(extra, value, Uint8Array)
+				}
+				if (value.length % bit_size != 0){
+					extra = value.slice(value.length - value.length.bit_size)
+					value = value.slice(0,value.length - value.length.bit_size)
+				}
+				data = new mode(value.buffer)
+				for (var i = 0; i < data.length; i++){
+					if (data[i] < current_min_value ){current_min_value = data[i];}
+					if (data[i] > current_max_value ){current_max_value = data[i];}
+				}
+			}
+
+			
+			min_value = current_min_value;
+			max_value = current_max_value;
+		
+			data = null
+		}
+		else{
+			data = await new Response(response).arrayBuffer();  
+
+			data = new mode(data.slice(start_byte));
+
+			response = null;
+		
+			var current_max_value = Number.MIN_VALUE;
+			var current_min_value = Number.MAX_VALUE;
+
+			for (var i = 0; i < data.length; i++){
+				if (data[i] < current_min_value ){current_min_value = data[i];}
+				if (data[i] > current_max_value ){current_max_value = data[i];}
+			}
+
+
+			min_value = current_min_value;
+			max_value = current_max_value;
+
+
+			data = data.map(i => (i - min_value ) / (max_value - min_value) * 255);
+			
+
+			// var intData = new Uint8ClampedArray(data);
+			data = new Uint8ClampedArray(data);
+		
+		}
+		
 		vscode.postMessage({
 			type: 'updateSlicing',
 			value: max_slice
 		});
+			
+		return getSliceData(response)
 
-		return canvas.toDataURL();
 	}
 
 	/**
@@ -265,6 +408,9 @@
 	const initialState = vscode.getState() || { scale: 'fit', offsetX: 0, offsetY: 0 };
 
 	// State
+	var loadDynamically = Boolean(settings["settings"]["alwaysLoadDynamically"]);
+	var maxFileSize = Number(settings["settings"]["maxFileSize"]) * 1024 * 1024;
+
 	let scale = initialState.scale;
 	let ctrlPressed = false;
 	let altPressed = false;
@@ -282,13 +428,7 @@
 		if (!image || !hasLoadedImage || !image.parentElement) {
 			return;
 		}
-		current_slice = clamp(newSlice, min_slice, max_slice);
-		vscode.postMessage({
-			type: 'message',
-			value: "Going to slice " + newSlice + " now."
-		});
-
-		
+		current_slice = clamp(newSlice, min_slice, max_slice);		
 		loadSlice();
 	}
 
@@ -482,18 +622,22 @@
 				type: 'slice',
 				value: `${current_slice + 1}\/${max_slice + 1}`
 			});
-			loadSlice();
-			// if (scrollTimer != -1){
-			// 	clearTimeout(scrollTimer);
-			// }
-	
-			// // scrollTimer = window.setTimeout(scrollFinished(), 500);
-			// scrollTimer = window.setTimeout(scrollFinished,500)
+			if (!loadDynamically){
+				loadSlice();
+			}
+			else{
+				if (scrollTimer != -1){
+					clearTimeout(scrollTimer);
+				}
 		
-			// function scrollFinished() {
-				
-			// 	loadSlice(delta);
-			// }
+				// scrollTimer = window.setTimeout(scrollFinished(), 500);
+				scrollTimer = window.setTimeout(scrollFinished,500)
+			
+				function scrollFinished() {
+					
+					loadSlice();
+				}
+			}
 
 
 

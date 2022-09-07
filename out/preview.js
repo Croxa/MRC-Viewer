@@ -79,7 +79,9 @@ class Preview extends dispose_1.Disposable {
                 resourceRoot,
                 extensionRoot,
             ]
+            
         };
+        
         this._register(webviewEditor.webview.onDidReceiveMessage(message => {
             switch (message.type) {
                 case 'size':
@@ -108,11 +110,13 @@ class Preview extends dispose_1.Disposable {
                 case 'message':
                     {
                         vscode.window.showInformationMessage(message.value);
+                        break;
                         
                     }
                 case "updateSlicing":
                     {
                         this.sliceStatusBarEntry.updateOptions(message.value);
+                        break;
                     }
             }
         }));
@@ -208,6 +212,7 @@ class Preview extends dispose_1.Disposable {
                 isMac: process.platform === 'darwin',
                 src: yield this.getResourcePath(this.webviewEditor, this.resource, version),
                 worker: escapeAttribute(this.extensionResource('/media/worker.js')),
+                settings:vscode.workspace.getConfiguration().get("mrcviewer")
             };
             const cspSource = this.webviewEditor.webview.cspSource;
             const nonce = Date.now().toString();
