@@ -4,7 +4,7 @@
 	"description": "Preview MRC (.mrc) files in VSCode",
 	"publisher": "philippschoennenbeck",
 	"icon": "images/icon.png",
-	"version": "0.0.2",
+	"version": "0.2.0",
 	"engines": {
 		"vscode": "^1.70.2"
 	},
@@ -25,10 +25,32 @@
 		"onCustomEditor:philippschoennenbeck.preview-mrc",
 		"onCommand:preview-mrc.zoomIn",
 		"onCommand:preview-mrc.zoomOut"
-		
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		
+ 
+		"configuration": {
+			"properties": {
+				"mrcviewer.alwaysLoadDynamically": {
+					"default": "false",
+					"description": "Whether to always load the mrc file dynamically. Loading dynamically is slower but reduces RAM usage.",
+					"scope": "resource",
+					"type": "boolean"
+				},
+				"mrcviewer.maxFileSize": {
+					"default": "1024",
+					"description": "Max file size in Mb to still load completely in RAM. If the file size is larger, the data will be loaded dynamically.",
+					"scope": "resource",
+					"type": "number"
+				}
+			},
+			"title": "MrcViewer",
+			"type": "object"
+			  
+		},
+  
+
 		"customEditors": [
 			{
 				"viewType": "philippschoennenbeck.preview-mrc",
@@ -67,7 +89,6 @@
 			]
 		}
 	},
-
 	"devDependencies": {
 		"@types/glob": "^7.1.3",
 		"@types/mocha": "^8.0.0",
@@ -80,10 +101,15 @@
 		"mocha": "^8.0.1",
 		"typescript": "^3.8.3",
 		"vscode-test": "^1.4.0"
-		
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Croxa/MRC-Viewer"
-	  }
+	},
+	"__metadata": {
+		"id": "a834c90a-3ceb-4542-b6f9-66a64e73ffa2",
+		"publisherDisplayName": "Philipp Schoennenbeck",
+		"publisherId": "3e4f6f71-798d-4969-80a9-2683cb6ca776",
+		"isPreReleaseVersion": false
+	}
 }
